@@ -38,7 +38,7 @@ async function main() {
   // STEP 1 ===================================
   console.log(`STEP 1 ===================================`);
   const bytecode = fs.readFileSync(
-    "./Contracts_ZarelLendingContract_sol_ZarelLending.bin"
+    "./Contracts_ZarelBorrowingContract_sol_ZarelBorrow.bin"
   );
   console.log(`- Done \n`);
 
@@ -142,16 +142,7 @@ async function main() {
       TokenAddress.toString()
     )} units of token ID ${TokenAddress}`
   );
-  //////////////////
-  //   var balanceCheckTx = await new AccountBalanceQuery()
-  //     .setAccountId(contractId)
-  //     .execute(client);
-  //   console.log(
-  //     `- Cont's balance: ${balanceCheckTx.tokens._map.get(
-  //       TokenAddress.toString()
-  //     )} units of token ID ${TokenAddress}`
-  //   );
-  /////////////
+  /////////////////////////////
   // TRANSFER STABLECOIN FROM TREASURY TO CON
   let tokenTransferTx = await new TransferTransaction()
     .addTokenTransfer(TokenAddress, treasuryId, -100)
@@ -219,47 +210,47 @@ async function main() {
 
   let tB = await bCheckerFcn(treasuryId);
   let aB = await bCheckerFcn(aliceId);
-  let aC = await bCheckerFcn(aliceId);
+  let aT = await TCheckerFcn(aliceId);
   console.log(`- Treasury balance: ${tB} units of NFT ${NFTAddress}`);
   console.log(`- Alice balance: ${aB} units of NFT ${NFTAddress} \n`);
-  console.log(`- Alice balance: ${aC} units of Token ${TokenAddress} \n`);
+  console.log(`- Alice balance: ${aT} units of Token ${TokenAddress} \n`);
 
   // STEP 4 ===================================
   console.log(`STEP 5 ===================================`);
-  // Execute a contract function (lend)
-  const contractLendTx = await new ContractExecuteTransaction()
+  // Execute a contract function (Borrow)
+  const contractBorrowTx = await new ContractExecuteTransaction()
     .setContractId(contractId)
     .setGas(3000000)
     .setFunction(
-      "Lend",
+      "Borrow",
       new ContractFunctionParameters()
         .addAddress(aliceId.toSolidityAddress())
         .addInt64(1)
     )
     .freezeWith(client)
     .sign(aliceKey);
-  const contractExecSign3 = await contractLendTx.sign(aliceKey);
-  const contractLendSubmit = await contractExecSign3.execute(client);
-  const contractLendRx = await contractLendSubmit.getReceipt(client);
-  console.log(`- Lend: ${contractLendRx.status.toString()}`);
+  const contractExecSign3 = await contractBorrowTx.sign(aliceKey);
+  const contractBorrowSubmit = await contractExecSign3.execute(client);
+  const contractBorrowRx = await contractBorrowSubmit.getReceipt(client);
+  console.log(`- Borrow: ${contractBorrowRx.status.toString()}`);
 
   tB = await bCheckerFcn(treasuryId);
   aB = await bCheckerFcn(aliceId);
-  aC = await bCheckerFcn(aliceId);
+  aT = await TCheckerFcn(aliceId);
   console.log(`- Treasury balance: ${tB} units of NFT ${NFTAddress}`);
   console.log(`- Alice balance: ${aB} units of NFT ${NFTAddress} \n`);
-  console.log(`- Alice balance: ${aC} units of Token ${TokenAddress} \n`);
+  console.log(`- Alice balance: ${aT} units of Token ${TokenAddress} \n`);
 
-  const contractLendTx2 = await new ContractExecuteTransaction()
+  const contractBorrowTx2 = await new ContractExecuteTransaction()
     .setContractId(contractId)
     .setGas(3000000)
     .setFunction("getNFts", new ContractFunctionParameters().addInt64(1))
     .freezeWith(client)
     .sign(treasuryKey);
-  const contractExecSign4 = await contractLendTx2.sign(treasuryKey);
-  const contractLendSubmit2 = await contractExecSign4.execute(client);
-  const contractLendRx2 = await contractLendSubmit2.getReceipt(client);
-  console.log(`- Lend: ${contractLendRx2.status.toString()}`);
+  const contractExecSign4 = await contractBorrowTx2.sign(treasuryKey);
+  const contractBorrowSubmit2 = await contractExecSign4.execute(client);
+  const contractBorrowRx2 = await contractBorrowSubmit2.getReceipt(client);
+  console.log(`- Borrow: ${contractBorrowRx2.status.toString()}`);
 
   tB = await bCheckerFcn(treasuryId);
   console.log(`- Treasury balance: ${tB} units of NFT ${NFTAddress}`);
@@ -272,6 +263,13 @@ async function bCheckerFcn(aId) {
     .setAccountId(aId)
     .execute(client);
   return balanceCheckTx.tokens._map.get(NFTAddress.toString());
+}
+
+async function TCheckerFcn(aId) {
+  let balanceCheckTx = await new AccountBalanceQuery()
+    .setAccountId(aId)
+    .execute(client);
+  return balanceCheckTx.tokens._map.get(TokenAddress.toString());
 }
 
 main();

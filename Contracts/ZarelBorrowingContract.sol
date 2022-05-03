@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.11;
 
-// import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./hip-206/HederaTokenService.sol";
 import "./hip-206/HederaResponseCodes.sol";
 
@@ -17,7 +16,7 @@ interface IERC721 {
     function ownerOf(uint256 _tokenId) external view returns (address);
 }
 
-contract ZarelLending is HederaTokenService {
+contract ZarelBorrow is HederaTokenService {
     int64 public floorPrice;
 
     IERC20 public immutable ZarelToken;
@@ -60,7 +59,7 @@ contract ZarelLending is HederaTokenService {
         _;
     }
 
-    function Lend(address sender, int64 _serialNumber)
+    function Borrow(address sender, int64 _serialNumber)
         public
         IsMember(sender)
         returns (bool)
