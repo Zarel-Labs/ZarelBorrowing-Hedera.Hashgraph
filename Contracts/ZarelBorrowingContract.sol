@@ -26,14 +26,14 @@ contract ZarelBorrow is HederaTokenService {
     address NftToken;
     address ZToken;
 
-    struct Lender {
+    struct Borrower {
         uint40 time;
         int64 serialNumber;
         int64 balance;
         bool isActive;
         address lender;
     }
-    mapping(address => Lender) public LenderDetails;
+    mapping(address => Borrower) public BorrowerDetails;
 
     constructor(
         address _admin,
@@ -64,10 +64,10 @@ contract ZarelBorrow is HederaTokenService {
         IsMember(sender)
         returns (bool)
     {
-        Lender storage l = LenderDetails[sender];
+        Borrower storage b = BorrowerDetails[sender];
         uint256 Id = uint64(_serialNumber);
         require(sender == ZarelNFT.ownerOf(Id), "Not owner of this NFT");
-        require(!l.isActive, "You have an active loan");
+        require(!b.isActive, "You have an active loan");
 
         // receive zarel Nft as collateral for token
         int256 response = HederaTokenService.transferNFT(
@@ -86,19 +86,19 @@ contract ZarelBorrow is HederaTokenService {
             "Token transfer failed"
         );
         // updater lender details
-        l.balance = floorPrice;
-        l.time = uint40(block.timestamp);
-        l.serialNumber = _serialNumber;
-        l.lender = sender;
-        l.isActive = true;
+        b.balance = floorPrice;
+        b.time = uint40(block.timestamp);
+        b.serialNumber = _serialNumber;
+        b.lender = sender;
+        b.isActive = true;
 
         return true;
     }
 
     function payBack(address receiver, int64 _amount) public {
-        Lender storage l = LenderDetails[msg.sender];
-        require(l.isActive == true, "You do not have a loan");
-        require(_amount >= l.balance, "not money owned");
+        Borrower storage b = BorrowerDetails[msg.sender];
+        require(b.isActive == true, "You do not have a loan");
+        require(_amount >= b.balance, "not money owned");
 
         int256 response = HederaTokenService.transferToken(
             ZToken,
@@ -115,14 +115,14 @@ contract ZarelBorrow is HederaTokenService {
             NftToken,
             address(this),
             receiver,
-            l.serialNumber
+            b.serialNumber
         );
 
         if (response2 != HederaResponseCodes.SUCCESS) {
             revert("NFT Transfer Failed");
         }
 
-        l.isActive = false;
+        b.isActive = false;
     }
 
     function setFloorPrice(int64 _floorPrice) public onlyAdmin returns (int64) {
