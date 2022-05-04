@@ -17,12 +17,14 @@ interface IERC721 {
 }
 
 contract ZarelBorrow is HederaTokenService {
-    int64 public floorPrice;
-
     IERC20 public immutable ZarelToken;
     IERC721 public immutable ZarelNFT;
+
+    int64 public floorPrice;
     // fee to experiment with, when there is a default in payment
-    int16 constant fee = 10000;
+    int16 constant fee = 100;
+    //// an array of NFTs
+    uint64[] Nfts;
 
     address admin;
     address NftToken;
@@ -98,7 +100,7 @@ contract ZarelBorrow is HederaTokenService {
     }
 
     function payBack(address receiver, int64 _amount) public {
-        Borrower storage b = BorrowerDetails[msg.sender];
+        Borrower storage b = BorrowerDetails[receiver];
         require(b.isActive == true, "You do not have a loan");
         // checks diff between  present time and borrowing start time;
         // if greater than 30 days, a fee is attached to the loan repayable;
@@ -115,20 +117,47 @@ contract ZarelBorrow is HederaTokenService {
                 revert("Token Transfer Failed");
             }
 
-            int256 res2 = HederaTokenService.transferNFT(
+            int256 res1 = HederaTokenService.transferNFT(
                 NftToken,
                 address(this),
                 receiver,
                 b.serialNumber
             );
 
-            if (res2 != HederaResponseCodes.SUCCESS) {
+            if (res1 != HederaResponseCodes.SUCCESS) {
                 revert("NFT Transfer Failed");
             }
 
             b.isActive = false;
         }
+
+        int256 res2 = HederaTokenService.transferToken(
+            ZToken,
+            receiver,
+            address(this),
+            _amount
+        );
+
+        if (res2 != HederaResponseCodes.SUCCESS) {
+            revert("Token Transfer Failed");
+        }
+
+        int256 res3 = HederaTokenService.transferNFT(
+            NftToken,
+            address(this),
+            receiver,
+            b.serialNumber
+        );
+
+        if (res3 != HederaResponseCodes.SUCCESS) {
+            revert("NFT Transfer Failed");
+        }
+
+        b.isActive = false;
     }
+
+    ////////////////////////////////////////////////////
+    //=================== onlyAdmin =================//
 
     function setFloorPrice(int64 _floorPrice) public onlyAdmin returns (int64) {
         floorPrice = _floorPrice;
@@ -139,8 +168,10 @@ contract ZarelBorrow is HederaTokenService {
         ZarelToken.balanceOf(address(this));
     }
 
-    function NFTBalance() public view onlyAdmin {
-        ZarelNFT.balanceOf(address(this));
+    function NFTBalance() public view onlyAdmin returns (uint256) {
+        uint256 balance = ZarelNFT.balanceOf(address(this));
+
+        return balance;
     }
 
     function getNFts(int64 serialNumber) public onlyAdmin {
