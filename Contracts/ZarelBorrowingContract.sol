@@ -21,6 +21,9 @@ contract ZarelBorrow is HederaTokenService {
 
     IERC20 public immutable ZarelToken;
     IERC721 public immutable ZarelNFT;
+    // fee to experiment with, when there is a default in payment 
+    int16 constant fee = 10000;
+
 
     address admin;
     address NftToken;
@@ -85,7 +88,7 @@ contract ZarelBorrow is HederaTokenService {
             ZarelToken.transfer(sender, uint64(floorPrice)),
             "Token transfer failed"
         );
-        // updater lender details
+        // update lender details
         b.balance = floorPrice;
         b.time = uint40(block.timestamp);
         b.serialNumber = _serialNumber;
@@ -98,6 +101,36 @@ contract ZarelBorrow is HederaTokenService {
     function payBack(address receiver, int64 _amount) public {
         Borrower storage b = BorrowerDetails[msg.sender];
         require(b.isActive == true, "You do not have a loan");
+        // checks diff between  present time and borrowing start time; 
+        // if greater than 30 days, a fee is attached to the loan repayable;
+        if ((block.timestamp - b.time) / 86400  > 30) {
+            require(_amount >= (b.balance + fee), "Pay up total debt");
+            int256 res = HederaTokenService.transferToken(
+                ZToken,
+                receiver,
+                address(this),
+                _amount
+            );
+
+            if (res != HederaResponseCodes.SUCCESS) {
+                revert("Token Transfer Failed");
+            }
+
+            int256 res2 = HederaTokenService.transferNFT(
+                NftToken,
+                address(this),
+                receiver,
+                b.serialNumber
+            );
+
+            if (res2 != HederaResponseCodes.SUCCESS) {
+                revert("NFT Transfer Failed");
+            }
+
+            b.isActive = false;
+
+        }
+
         require(_amount >= b.balance, "not money owned");
 
         int256 response = HederaTokenService.transferToken(
